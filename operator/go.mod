@@ -1,8 +1,9 @@
 module github.com/nebucloud/nebucloud-infra/operator
 
-go 1.22.0
+go 1.22.2
 
 require (
+	github.com/nebucloud/nebucloud-infra/pkg v0.0.0-20250324164108-a9df937de691
 	github.com/onsi/ginkgo/v2 v2.19.0
 	github.com/onsi/gomega v1.33.1
 	k8s.io/apimachinery v0.31.0
