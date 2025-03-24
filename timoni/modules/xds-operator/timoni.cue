@@ -5,7 +5,7 @@
 package main
 
 import (
-	templates "timoni.sh/xds-operator/templates"
+	templates "github.com/nebucloud/xds-operator/templates"
 )
 
 // Define the schema for the user-supplied values.

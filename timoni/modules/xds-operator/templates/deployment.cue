@@ -2,16 +2,25 @@ package templates
 
 import (
 	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 )
 
+// Deployment defines the xDS operator deployment
 #Deployment: appsv1.#Deployment & {
-	#config:    #Config
-	#cmName:    string
+	#config: #Config
+	
 	apiVersion: "apps/v1"
 	kind:       "Deployment"
-	metadata:   #config.metadata
-	spec: appsv1.#DeploymentSpec & {
+	metadata: {
+		name:      #config.metadata.name
+		namespace: #config.metadata.namespace
+		labels:    #config.metadata.labels
+	}
+	// Handle annotations separately to avoid optional field reference error
+	if #config.metadata.annotations != _|_ {
+		metadata: annotations: #config.metadata.annotations
+	}
+	
+	spec: {
 		replicas: #config.replicas
 		selector: matchLabels: #config.selector.labels
 		template: {
@@ -21,83 +30,94 @@ import (
 					annotations: #config.podAnnotations
 				}
 			}
-			spec: corev1.#PodSpec & {
-				serviceAccountName: #config.metadata.name
-				containers: [
-					{
-						name:            #config.metadata.name
-						image:           #config.image.reference
-						imagePullPolicy: #config.image.pullPolicy
-						ports: [
-							{
-								name:          "http"
-								containerPort: 8080
-								protocol:      "TCP"
-							},
-						]
-						livenessProbe: {
-							httpGet: {
-								path: "/healthz"
-								port: "http"
-							}
-						}
-						readinessProbe: {
-							httpGet: {
-								path: "/healthz"
-								port: "http"
-							}
-						}
-						volumeMounts: [
-							{
-								mountPath: "/etc/nginx/conf.d"
-								name:      "config"
-							},
-							{
-								mountPath: "/usr/share/nginx/html"
-								name:      "html"
-							},
-						]
-						resources:       #config.resources
-						securityContext: #config.securityContext
-					},
-				]
-				volumes: [
-					{
-						name: "config"
-						configMap: {
-							name: #cmName
-							items: [{
-								key:  "nginx.default.conf"
-								path: key
-							}]
-						}
-					},
-					{
-						name: "html"
-						configMap: {
-							name: #cmName
-							items: [{
-								key:  "index.html"
-								path: key
-							}]
-						}
-					},
-				]
-				if #config.podSecurityContext != _|_ {
-					securityContext: #config.podSecurityContext
-				}
-				if #config.topologySpreadConstraints != _|_ {
-					topologySpreadConstraints: #config.topologySpreadConstraints
-				}
-				if #config.affinity != _|_ {
-					affinity: #config.affinity
-				}
-				if #config.tolerations != _|_ {
-					tolerations: #config.tolerations
-				}
+			spec: {
+				serviceAccountName: #config.serviceAccount.name
+				
 				if #config.imagePullSecrets != _|_ {
 					imagePullSecrets: #config.imagePullSecrets
 				}
+				
+				if #config.podSecurityContext != _|_ {
+					securityContext: #config.podSecurityContext
+				}
+				
+				if #config.tolerations != _|_ {
+					tolerations: #config.tolerations
+				}
+				
+				if #config.affinity != _|_ {
+					affinity: #config.affinity
+				}
+				
+				if #config.topologySpreadConstraints != _|_ {
+					topologySpreadConstraints: #config.topologySpreadConstraints
+				}
+				
+				containers: [
+					{
+						name:            "operator"
+						image:           "\(#config.image.repository):\(#config.image.tag)"
+						imagePullPolicy: #config.image.pullPolicy
+						
+						args: [
+							"--metrics-bind-address=:8080",
+							"--health-probe-bind-address=:\(#config.healthProbe.liveness.port)",
+							"--xds-server-address=\(#config.xdsServer.address)",
+							"--xds-node-id=\(#config.xdsServer.nodeID)",
+						]
+						
+						resources: {
+							if #config.resources.requests != _|_ {
+								requests: #config.resources.requests
+							}
+							if #config.resources.limits != _|_ {
+								limits: #config.resources.limits
+							}
+						}
+						
+						ports: [
+							{
+								name:          "metrics"
+								containerPort: 8080
+								protocol:      "TCP"
+							},
+							{
+								name:          "health"
+								containerPort: #config.healthProbe.liveness.port
+								protocol:      "TCP"
+							},
+						]
+						
+						livenessProbe: {
+							httpGet: {
+								path: #config.healthProbe.liveness.path
+								port: #config.healthProbe.liveness.port
+							}
+							initialDelaySeconds: #config.healthProbe.liveness.initialDelaySeconds
+							periodSeconds:       #config.healthProbe.liveness.periodSeconds
+						}
+						
+						readinessProbe: {
+							httpGet: {
+								path: #config.healthProbe.readiness.path
+								port: #config.healthProbe.readiness.port
+							}
+							initialDelaySeconds: #config.healthProbe.readiness.initialDelaySeconds
+							periodSeconds:       #config.healthProbe.readiness.periodSeconds
+						}
+						
+						securityContext: #config.securityContext
+					},
+				]
+				
+				securityContext: {
+					runAsNonRoot: true
+					seccompProfile: {
+						type: "RuntimeDefault"
+					}
+				}
+				
+				terminationGracePeriodSeconds: 10
 			}
 		}
 	}

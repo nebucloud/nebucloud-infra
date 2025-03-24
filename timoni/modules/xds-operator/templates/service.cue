@@ -4,23 +4,33 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+// Service defines the Kubernetes service for the xDS operator metrics
 #Service: corev1.#Service & {
-	#config:    #Config
+	#config: #Config
+	
 	apiVersion: "v1"
 	kind:       "Service"
-	metadata:   #config.metadata
-	if #config.service.annotations != _|_ {
-		metadata: annotations: #config.service.annotations
+	metadata: {
+		name:      "\(#config.metadata.name)-metrics"
+		namespace: #config.metadata.namespace
+		labels:    #config.metadata.labels
+		if #config.service.annotations != _|_ {
+			annotations: #config.service.annotations
+		}
 	}
-	spec: corev1.#ServiceSpec & {
-		type:     corev1.#ServiceTypeClusterIP
+	
+	spec: {
+		type:     #config.service.type
 		selector: #config.selector.labels
 		ports: [
 			{
+				name:       "metrics"
 				port:       #config.service.port
+				targetPort: "metrics"
 				protocol:   "TCP"
-				name:       "http"
-				targetPort: name
+				if #config.service.type == "NodePort" && #config.service.nodePort != _|_ {
+					nodePort: #config.service.nodePort
+				}
 			},
 		]
 	}
