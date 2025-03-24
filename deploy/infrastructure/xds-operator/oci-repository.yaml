@@ -1,0 +1,11 @@
+# deploy/infrastructure/xds-operator/oci-repository.yaml
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: xds-operator-module
+  namespace: flux-system
+spec:
+  interval: 10m
+  url: oci://github.com/nebucloud/nebucloud-infra/timoni/modules/xds-operator
+  ref:
+    tag: latest

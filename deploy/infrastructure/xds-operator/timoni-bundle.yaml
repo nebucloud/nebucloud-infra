@@ -1,0 +1,27 @@
+# deploy/infrastructure/xds-operator/timoni-bundle.yaml
+apiVersion: timoni.sh/v1alpha1
+kind: Bundle
+metadata:
+  name: xds-operator-bundle
+  namespace: flux-system
+spec:
+  interval: 10m
+  sourceRef:
+    kind: OCIRepository
+    name: xds-operator-module
+  values:
+    name: "xds-operator"
+    namespace: "xds-system"
+    image:
+      repository: "nebucloud/xds-operator"
+      tag: "latest"
+    xdsServer:
+      address: "xds-server.xds-system.svc.cluster.local:18000"
+      nodeID: "xds-operator"
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "128Mi"
+      limits:
+        cpu: "500m"
+        memory: "256Mi"

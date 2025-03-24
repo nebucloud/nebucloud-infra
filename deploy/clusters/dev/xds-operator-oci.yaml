@@ -1,0 +1,24 @@
+# deploy/clusters/dev/xds-operator-oci.yaml
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: xds-operator
+  namespace: flux-system
+spec:
+  interval: 10m
+  url: oci://ghcr.io/nebucloud/xds-operator
+  ref:
+    tag: dev
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: xds-operator
+  namespace: flux-system
+spec:
+  interval: 10m
+  sourceRef:
+    kind: OCIRepository
+    name: xds-operator
+  path: "."
+  prune: true

@@ -1,0 +1,17 @@
+# deploy/apps/xds-resources/api-listener.yaml
+apiVersion: xds.nebucloud.io/v1alpha1
+kind: Listener
+metadata:
+  name: api-listener
+  namespace: default
+spec:
+  name: api-listener
+  address: 0.0.0.0
+  port: 8080
+  routes:
+    - name: api-route
+      match:
+        prefix: "/api/"
+      route:
+        cluster: backend-service
+        timeout: "30s"
